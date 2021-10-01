@@ -25,27 +25,24 @@ testnumbers = []
 
 pygame.init()
 pygame.mixer.init()
-pygame.mixer.music.load("Sounds/music.wav")
-pygame.mixer.music.set_volume(0.2)
-pygame.mixer.music.play()
 
 pygame.display.set_caption("Frog Game")
 
 pygame.font.init()
-numflyfont = pygame.font.SysFont('Calibri', 13)
-numflysurface = numflyfont.render('Number of flies left: ', False, (255, 100, 0))
-gameoverfont = pygame.font.SysFont('Calibri', 45)
-gameoversurface = gameoverfont.render('GAME OVER', False, (255, 100, 0))
-tryagainfont = pygame.font.SysFont('Calibri', 35)
-tryagainsurface = tryagainfont.render('Click Return and go to the next level', False, (255, 100, 0))
-winnerfont = pygame.font.SysFont('Calibri', 45)
-descriptionfont1 = pygame.font.SysFont('Calibri', 13)
-descriptionsurface1 = descriptionfont1.render('Press one of the arrow keys to catch a fly, press spacebar to dive under water and escape from the stork. But watch out, you can only take one action at a time and each costs you energy.', False, (255,100,0))
-descriptionfont2 = pygame.font.SysFont('Calibri', 13)
-descriptionsurface2 = descriptionfont2.render('Fortunately eating flies gives you energy - the goal is to catch them all. If you lose a live, just press the return key to start again!', False, (255,100,0))
+num_fly_font = pygame.font.SysFont('Calibri', 13)
+num_fly_surface = num_fly_font.render('Number of flies left: ', False, (255, 100, 0))
+game_over_font = pygame.font.SysFont('Calibri', 45)
+game_over_surface = game_over_font.render('GAME OVER', False, (255, 100, 0))
+try_again_font = pygame.font.SysFont('Calibri', 35)
+try_again_surface = try_again_font.render('Click Return and go to the next level', False, (255, 100, 0))
+winner_font = pygame.font.SysFont('Calibri', 45)
+description_font1 = pygame.font.SysFont('Calibri', 13)
+description_surface1 = description_font1.render('Press one of the arrow keys to catch a fly, press spacebar to dive under water and escape from the stork. But watch out, you can only take one action at a time and each costs you energy.', False, (255,100,0))
+description_font2 = pygame.font.SysFont('Calibri', 13)
+description_surface2 = description_font2.render('Fortunately eating flies gives you energy - the goal is to catch them all. If you lose a live, just press the return key to start again!', False, (255,100,0))
 
 
-# defining constants, colors, sounds, 
+# defining constants, colors, sounds, images
 tonguelength = 11
 tongue_velocity = 5
 permeability = 1 # value between 0 and 10 - higher values make frog more visible when under water
@@ -67,10 +64,17 @@ light_red = (255, 110, 110)
 water_blue = (156, 211, 219)
 light_green = (160, 255, 160)
 
-slurpSound = pygame.mixer.Sound("Sounds/slurp.wav")
-splashSound = pygame.mixer.Sound("Sounds/splash.wav") # Music used from https://www.FesliyanStudios.com
-gameoverSound = pygame.mixer.Sound("Sounds/mixkit-retro-arcade-game-over-470.wav")
-winnerSound = pygame.mixer.Sound("Sounds/mixkit-game-level-completed-2059.wav")
+slurpSound = pygame.mixer.Sound("sounds/slurp.wav")
+splashSound = pygame.mixer.Sound("sounds/splash.wav") # Music used from https://www.FesliyanStudios.com
+gameoverSound = pygame.mixer.Sound("sounds/mixkit-retro-arcade-game-over-470.wav")
+winnerSound = pygame.mixer.Sound("sounds/mixkit-game-level-completed-2059.wav")
+
+full_image = pygame.image.load("graphics/full.png") # image of a full heart
+full_image.set_alpha(128) # make image transparent
+full_image = pygame.transform.smoothscale(full_image, (45,40)) # scale image
+empty_image = pygame.image.load("graphics/empty.png") # image of an empty heart
+empty_image.set_alpha(128)
+empty_image = pygame.transform.smoothscale(empty_image, (45,40))
 
 # values for grid and making the screen
 cell_size = 4
@@ -85,7 +89,7 @@ screen = pygame.display.set_mode(window_size)
 
 
 
-# fill a cell with flies into three directions after reproduction
+# fills a cell with flies into three directions after reproduction
 def fillCellWithFlies():
     return [Fly(dir) for dir in directions2.values()]
 
@@ -93,6 +97,7 @@ def randomNewDirection():
     dirs = ['left', 'right', 'up', 'down']
     return directions[dirs[random.randint(0,3)]]
 
+# computes difference in two values (for example x-coordinates) considering the periodic behavior of the game
 def diff(a,b, length):
     return min(length+a-b, length+b-a, abs(a-b))
 
@@ -168,12 +173,6 @@ class CellularAutomaton:
     def __init__(self, health = 0, under_water = False, level = 1):
         self.level = level
         self.under_water = under_water
-        self.full = pygame.image.load("Grafiken/full.png") # image of a full heart
-        self.full.set_alpha(128) # make image transparent
-        self.full = pygame.transform.smoothscale(self.full, (45,40)) # scale image
-        self.empty = pygame.image.load("Grafiken/empty.png") # image of an empty heart
-        self.empty.set_alpha(128)
-        self.empty = pygame.transform.smoothscale(self.empty, (45,40))
         self.lives = 3
         self.health = health
         self.health_displayed = health
@@ -192,17 +191,17 @@ class CellularAutomaton:
     # draws the three hearts (full or empty) according to the player's lives
     def drawHearts(self):
         if self.lives >= 1:
-            screen.blit(self.full, (20,20))
+            screen.blit(full_image, (20,20))
         else:
-            screen.blit(self.empty, (20,20))
+            screen.blit(empty_image, (20,20))
         if self.lives >= 2:
-            screen.blit(self.full, (70,20))
+            screen.blit(full_image, (70,20))
         else:
-            screen.blit(self.empty, (70,20))
+            screen.blit(empty_image, (70,20))
         if self.lives == 3:
-            screen.blit(self.full, (120,20))
+            screen.blit(full_image, (120,20))
         else:
-            screen.blit(self.empty, (120,20))
+            screen.blit(empty_image, (120,20))
 
     # draws the colored life-bar of the player's health and the current health state
     def drawLife(self):
@@ -233,8 +232,8 @@ class CellularAutomaton:
         screen.blit(flycountsurface, (window_size[0]-185, window_size[1]-120))  
         
     def writeDescription(self):
-        screen.blit(descriptionsurface1, (10,window_size[1]-50))   
-        screen.blit(descriptionsurface2, (10,window_size[1]-25)) 
+        screen.blit(description_surface1, (10,window_size[1]-50))   
+        screen.blit(description_surface2, (10,window_size[1]-25)) 
         levelfont = pygame.font.SysFont('Calibri', 15)
         levelsurface = levelfont.render('Level '+str(self.level), False, (255, 100, 0)) 
         screen.blit(levelsurface, (window_size[0]-100, window_size[1]-200)) 
@@ -363,7 +362,6 @@ class CellularAutomaton:
                 if (row, col) in self.frogs.keys():
                     if not self.paused:              
                         self.paused = True
-                        pygame.mixer.music.fadeout(500)
                         pygame.mixer.Sound.play(gameoverSound)
         return updated.storks
 
@@ -626,12 +624,12 @@ class CellularAutomaton:
             self.drawFlyStanding()
             self.writeDescription()
         elif self.game_over:
-            screen.blit(gameoversurface, (100,100))
-            screen.blit(tryagainsurface, (100, 200))
+            screen.blit(game_over_surface, (100,100))
+            screen.blit(try_again_surface, (100, 200))
         else: 
-            winnersurface = winnerfont.render('WINNER - Flies caught: '+str(self.caught_flies), False, (255, 100, 0))
-            screen.blit(winnersurface, (80,100))
-            screen.blit(tryagainsurface, (80, 200))          
+            winner_surface = winner_font.render('WINNER - Flies caught: '+str(self.caught_flies), False, (255, 100, 0))
+            screen.blit(winner_surface, (80,100))
+            screen.blit(try_again_surface, (80, 200))          
 
     # when the player loses a life and restarts the game with a new life
     def startWithNewLife(self):
@@ -729,14 +727,12 @@ class CellularAutomaton:
     def computeFrogStorkDistance(self):
         min_dist = 1000
         frog_center = self.getFrogCenter()
-        #frog_outer_positions = self.getOuterFrogs()
         stork_outer_positions = self.getOuterStorks()
-        # for frog_pos in frog_outer_positions:
         for stork_pos in stork_outer_positions:
             x = diff(frog_center[1], stork_pos[1], cols)
             y = diff(frog_center[0], stork_pos[0], rows)
-            min_dist = min(min_dist,max(x,y)) # math.sqrt(x**2 + y**2))
-        return min_dist - 8
+            min_dist = min(min_dist,max(x,y))
+        return min_dist - 8 # the frog center has a distance of 8 to its outer parts
 
     def makeLevelOne(self):
         self.createFrog([-1, 0], 62, 120)
@@ -778,7 +774,6 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                     running = False
 
             if not CA.paused and not CA.game_over and not CA.winner: # game is running and is updated every timestep
-            
                 if counter1 == 0 and counter2 == 0: # no additional rules
                     CA.update()            
                     if CA.health < 0:
@@ -803,7 +798,6 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                         CA.under_water = False
                     counter2 -= 1
 
-
                 if t%pf == 0: # frog randomly changes direction
                     frog_new_dir = randomNewDirection()
                     CA.changeFrogsDirection(frog_new_dir)
@@ -813,7 +807,6 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                     CA.changeStorksDirection(stork_new_dir)
 
                 t += 1
-
             elif not CA.game_over and not CA.winner: # if player has lost one live and game is paused
                 if CA.lives <= 0:
                     if not CA.game_over:
@@ -823,17 +816,13 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                     if counter1 != 0:
                         counter1 = 0
                     counter2 = CA.under_water_time                 
-        
             elif not CA.winner: # game over
                 running = False
-
             else: # victory
                 CA.winner = False
                 CA.numflies = -1
-            
             if drawing:
                 CA.draw()
-            
             if clock: 
                 clock2.tick(game_speed)
 
@@ -1005,7 +994,6 @@ def playGame():
                 CA.changeStorksDirection(stork_new_dir)
 
             t += 1
-            print(CA.computeFrogStorkDistance())
 
         elif not CA.game_over and not CA.winner: # if player has lost one live and game is paused
             if CA.lives <= 0:
@@ -1183,14 +1171,6 @@ all_steps_dic = {}
 #     print(pf, ps, 'average steps:', sum(steps)/runs)
 # with open('Steps' + str(frog_periods) + str(stork_periods) + str(random.randint(0,10000)) + ', runs= ' + str(runs), 'wb') as fp:
 #     pickle.dump(all_steps_dic, fp)
-# fig1, ax1 = plt.subplots()
-# ax1.set_title(str(runs) + ' runs')
-# ax1.boxplot(all_steps_dic.values(), patch_artist=True)
-# ax1.set_xticklabels(all_steps_dic.keys())
-# ax1.yaxis.grid(True)
-# ax1.set_xlabel('Different periods (pf, ps)')
-# ax1.set_ylabel('Number of timesteps')
-# plt.show()
 
 
 # for pf, ps in itertools.product(frog_periods, stork_periods):
@@ -1199,14 +1179,6 @@ all_steps_dic = {}
 #     print(pf, ps, 'average collisions to win:', sum(colls)/runs)
 # with open('SColls' + str(frog_periods) + str(stork_periods) + str(random.randint(0,10000)) + ', runs= ' + str(runs), 'wb') as fp:
 #     pickle.dump(all_colls_dic, fp)
-# fig2, ax2 = plt.subplots()
-# ax2.set_title('Collisions until win; ' + str(runs) + ' runs')
-# ax2.boxplot(all_colls_dic.values(), patch_artist=True)
-# ax2.set_xticklabels(all_colls_dic.keys())
-# ax2.yaxis.grid(True)
-# ax2.set_xlabel('Different periods (pf, ps)')
-# ax2.set_ylabel('Number of timesteps')
-# plt.show()
 
 playGame()
 pygame.quit()
