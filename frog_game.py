@@ -3,7 +3,6 @@ import numpy as np
 import pygame
 import os
 import random
-import time
 from collections import defaultdict
 import itertools
 import matplotlib.pyplot as plt
@@ -16,7 +15,7 @@ os.chdir(sourceFileDir)
 
 
 # choose game speed or change clock to False for game without buffer
-game_speed = 40 # ab 40 wird das Spiel erst ziemlich anspruchsvoll ;)
+game_speed = 30 # with speed 40 and higher the game gets really challenging
 clock = True
 
 pygame.init()
