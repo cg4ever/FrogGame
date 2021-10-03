@@ -16,12 +16,8 @@ os.chdir(sourceFileDir)
 
 
 # choose game speed or change clock to False for game without buffer
-game_speed = 30 # ab 40 wird das Spiel erst ziemlich anspruchsvoll ;)
+game_speed = 40 # ab 40 wird das Spiel erst ziemlich anspruchsvoll ;)
 clock = True
-
-testing = False
-testnumbers = []
-
 
 pygame.init()
 pygame.mixer.init()
@@ -36,21 +32,23 @@ game_over_surface = game_over_font.render('GAME OVER', False, (255, 100, 0))
 try_again_font = pygame.font.SysFont('Calibri', 35)
 try_again_surface = try_again_font.render('Click Return and go to the next level', False, (255, 100, 0))
 winner_font = pygame.font.SysFont('Calibri', 45)
-description_font1 = pygame.font.SysFont('Calibri', 13)
-description_surface1 = description_font1.render('Press one of the arrow keys to catch a fly, press spacebar to dive under water and escape from the stork. But watch out, you can only take one action at a time and each costs you energy.', False, (255,100,0))
-description_font2 = pygame.font.SysFont('Calibri', 13)
-description_surface2 = description_font2.render('Fortunately eating flies gives you energy - the goal is to catch them all. If you lose a live, just press the return key to start again!', False, (255,100,0))
+description_font1 = pygame.font.SysFont('Calibri', 16)
+description_surface1 = description_font1.render('Press one of the arrow keys to catch a fly, press spacebar to dive under water and escape from the stork.', False, (255,100,0))
+description_font2 = pygame.font.SysFont('Calibri', 16)
+description_surface2 = description_font1.render('But watch out, you can only take one action at a time and each costs you energy.', False, (255,100,0))
+description_font3 = pygame.font.SysFont('Calibri', 16)
+description_surface3 = description_font2.render('Fortunately eating flies gives you energy - the goal is to catch them all. If you lose a live, just press the return key to start again!', False, (255,100,0))
 
 
 # defining constants, colors, sounds, images
 tonguelength = 11
 tongue_velocity = 5
 permeability = 1 # value between 0 and 10 - higher values make frog more visible when under water
-frog_period = 120 # after how many time steps a frog changes its direction
-stork_period = 81
+frog_period = 75 # after how many time steps a frog changes its direction
+stork_period = 100
 
 directions = {'left': np.array([0,-1]), 'right': np.array([0,1]), 'up': np.array([-1,0]), 'down': np.array([1,0])}  # , 'northeast':np.array([-1,1]), 'northwest':np.array([-1,-1]), 'southeast': np.array([1,-1]), 'southwest': np.array([1,1])
-directions2 = {'right': np.array([0,1]), 'up': np.array([-1,0]), 'down':np.array([1,0])} # three directions for new flies after reproduction
+# new_directions = {'right': np.array([0,1]), 'up': np.array([-1,0]), 'down':np.array([1,0])} # three directions for new flies after reproduction
 
 health = 30
 
@@ -84,14 +82,16 @@ cols = 210
 grid_width = cell_size * cols 
 grid_height = cell_size * rows
 
-window_size = [int(grid_width) + 150, int(grid_height) + 95]
+window_size = [int(grid_width) + 150, int(grid_height) + 90]
 screen = pygame.display.set_mode(window_size)
-
 
 
 # fills a cell with flies into three directions after reproduction
 def fillCellWithFlies():
-    return [Fly(dir) for dir in directions2.values()]
+    dirs = ['left', 'right', 'up', 'down']
+    new_directions = {'left': np.array([0,-1]), 'right': np.array([0,1]), 'up': np.array([-1,0]), 'down': np.array([1,0])}
+    del new_directions[dirs[random.randint(0,3)]]
+    return [Fly(dir) for dir in new_directions.values()]
 
 def randomNewDirection():
     dirs = ['left', 'right', 'up', 'down']
@@ -232,8 +232,9 @@ class CellularAutomaton:
         screen.blit(flycountsurface, (window_size[0]-185, window_size[1]-120))  
         
     def writeDescription(self):
-        screen.blit(description_surface1, (10,window_size[1]-50))   
-        screen.blit(description_surface2, (10,window_size[1]-25)) 
+        screen.blit(description_surface1, (10,window_size[1]-75))   
+        screen.blit(description_surface2, (10,window_size[1]-50)) 
+        screen.blit(description_surface3, (10,window_size[1]-25)) 
         levelfont = pygame.font.SysFont('Calibri', 15)
         levelsurface = levelfont.render('Level '+str(self.level), False, (255, 100, 0)) 
         screen.blit(levelsurface, (window_size[0]-100, window_size[1]-200)) 
@@ -244,6 +245,7 @@ class CellularAutomaton:
                 if frog.part == 'tongue' and frog.originaltongue:
                     return pos
 
+    # when the game is played with automated strategy, this return boolean if the frog should go under water
     def hasToEvade(self, safety_distance):
         return self.computeFrogStorkDistance() < safety_distance and self.health >= 6
 
@@ -395,20 +397,22 @@ class CellularAutomaton:
                 if self.flyWillBeCrashed(new_row, new_col):
                     self.numflies -= 1
                     if self.numflies == 0:
+                        print(self.numflies)
                         self.winner = True
                         pygame.mixer.Sound.play(winnerSound)
                     continue
                 # else the fly can just move into the next cell 
                 else:
                     updated.appendFly(fly, new_row, new_col)
-        # in level two the flies are reproducing (two flies in one cell create one new fly) until the number of flies reaches 60 and the player loses a life
+        # in level two the flies are reproducing (two flies in one cell create one new fly) until the number of flies reaches 70 and the player loses a life
         if self.level >= 2 and self.reproducing:
             for position, cell in updated.flies.items():
                 if len(cell) == 2:
                     updated.flies[position] = fillCellWithFlies() # fillCellWithFlies() returns a list of three flies
                     self.numflies += 1
-                    if self.numflies > 60 and not self.paused:
+                    if self.numflies > 70 and not self.paused:
                         self.reproducing = False
+                        self.lives = 10
                         pygame.mixer.Sound.play(gameoverSound)
                         self.paused = True
         return updated.flies
@@ -422,11 +426,8 @@ class CellularAutomaton:
             self.flies = flies
             self.storks = storks
         else:
-            if not testing:
-                self.lives -= 1
-            else: 
-                self.lives -= 1
-                self.collisions += 1
+            self.lives -= 1
+            self.collisions += 1
 
     # returns a new defaultdict containing the new frogs when the tongue is activated (into a certain direction dir)
     def updateTongueFrogs(self, dir):
@@ -459,6 +460,7 @@ class CellularAutomaton:
                     self.numflies -=1
                     self.caught_flies += 1
                     if self.numflies == 0:
+                        print(self.numflies)
                         self.winner = True
                         pygame.mixer.Sound.play(winnerSound)
                     continue
@@ -477,6 +479,7 @@ class CellularAutomaton:
                 if self.flyWillBeCrashed(new_row, new_col):
                     self.numflies -= 1
                     if self.numflies == 0:
+                        print(self.numflies)
                         self.winner = True
                         pygame.mixer.Sound.play(winnerSound)
                     continue
@@ -488,8 +491,9 @@ class CellularAutomaton:
                     if len(cell) == 2:
                         updated.flies[position] = fillCellWithFlies()
                         self.numflies += 1
-                        if self.numflies > 60 and not self.paused:
+                        if self.numflies > 70 and not self.paused:
                             self.reproducing = False
+                            self.lives = 10
                             pygame.mixer.Sound.play(gameoverSound)
                             self.paused = True
         return updated.flies
@@ -503,11 +507,8 @@ class CellularAutomaton:
             self.flies = flies
             self.storks = storks
         else:
-            if not testing:
-                self.lives -= 1
-            else: 
-                self.lives -= 1
-                self.collisions += 1
+            self.lives -= 1
+            self.collisions += 1
 
 
     # returns a new defaultdict containing the new storks when the frog is under water (no collisions possible anymore)
@@ -538,6 +539,7 @@ class CellularAutomaton:
                 if self.flyWillBeCrashedByStork(new_row, new_col):
                     self.numflies -= 1
                     if self.numflies == 0:
+                        print(self.numflies)
                         self.winner = True
                         pygame.mixer.Sound.play(winnerSound)
                     continue
@@ -549,8 +551,9 @@ class CellularAutomaton:
                     if len(cell) == 2:
                         updated.flies[position] = fillCellWithFlies()
                         self.numflies += 1
-                        if self.numflies > 60 and not self.paused:
+                        if self.numflies > 70 and not self.paused:
                             self.reproducing = False
+                            self.lives = 10
                             pygame.mixer.Sound.play(gameoverSound)
                             self.paused = True
         return updated.flies
@@ -563,12 +566,9 @@ class CellularAutomaton:
             self.storks = self.updateUnderWaterStorks()
             self.frogs = frogs
             self.flies = flies
-        else: 
-            if not testing:
-                self.lives -= 1
-            else: 
-                self.lives -= 1
-                self.collisions += 1
+        else:
+            self.lives -= 1
+            self.collisions += 1
 
     # will be used for the random changes of direction
     def changeFrogsDirection(self, direction):
@@ -653,12 +653,11 @@ class CellularAutomaton:
 
     # when the player has lost all lives or has won the game, a new round can be started
     def startNewRound(self):
-        global counter1, counter2, t
         if self.winner: # continue to next level 
-            self.level += 1
+            self.level = 2
         if self.game_over: # start again at level one and with three new lives
             self.level = 1
-            self.lives = 3
+        self.lives = 3
         # reset all variables
         self.game_over = False
         self.winner = False
@@ -666,15 +665,14 @@ class CellularAutomaton:
         self.health = 30
         self.numflies = 0
         self.caught_flies = 0
+        self.removeTongues()
+
         self.storks = defaultdict(list)
         self.frogs = defaultdict(list)
         self.flies = defaultdict(list)
         self.paused = False
         self.under_water = False
         self.makeLevelOne()
-        counter1 = 0
-        counter2 = 0
-        t = 0
 
     # create a new frog with different parts so that it looks beautiful on the screen, (row, col) is the center of the frog's body (the tongue/ mouth)
     def createFrog(self, direction, row, col):
@@ -743,19 +741,130 @@ class CellularAutomaton:
             dir = randomNewDirection()
             row = random.randint(0, rows-1)
             col = random.randint(0, cols-1)
-            self.appendFly(Fly(dir), row, col)
+            if (row, col) not in self.flies:
+                self.appendFly(Fly(dir), row, col)
 
 #######################################################################################
 #######################################################################################
 #######################################################################################
 
-# main starts here
+# main playing loop
+def playGame():
+    CA = CellularAutomaton(health = 30, level = 1)
+    CA.makeLevelOne()
+
+    started = False
+
+    clock1 = pygame.time.Clock()
+
+    # wait for the player to start the game
+    while not started:
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and (event.key == K_RETURN or event.key == K_ESCAPE)):
+                started = True
+
+        CA.draw()
+        clock1.tick(60)
+
+        pygame.display.flip()
+
+    clock2 = pygame.time.Clock()
+
+    t = 0
+    running = True
+    counter1 = 0 # counter for tongue
+    counter2 = 0 # counter for under water
+    buttons = {K_UP: [-1, 0], K_DOWN: [1, 0], K_RIGHT: [0, 1], K_LEFT: [0, -1]}
+    times = [] # for measuring how long each time step takes
+
+    while running: 
+        events = pygame.event.get()
+        for event in events:
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): # game ends and pygame window is closed
+                running = False
+
+        if not CA.paused and not CA.game_over and not CA.winner: # game is running and is updated every timestep
+            for event in events:
+                if counter1 == 0 and counter2 == 0 and event.type == KEYDOWN and event.key in (K_UP, K_DOWN, K_RIGHT, K_LEFT, K_SPACE): # player can only take an action if both counters are 0
+                    if event.key == K_SPACE: # frog goes under water
+                        counter2 = CA.under_water_time
+                        CA.health -= 6
+                        CA.under_water = True # used in self.draw(), to make frog disappear
+                    else:
+                        dir = buttons[event.key]
+                        counter1 = 2*tonguelength
+                        CA.health -= 3
+            if counter1 == 0 and counter2 == 0: # no additional rules
+                CA.update()  
+                if CA.health < 0:
+                    CA.paused = True
+                    CA.lives -= 1
+            elif counter1 != 0: # tongue is activated
+                CA.updateTongue(dir)
+                if counter1 == 2*tonguelength: # first time step where tongue is activated
+                    pygame.mixer.Sound.play(slurpSound)
+                if counter1 == 1: # last time step where the tongue is activated
+                    CA.reviveOriginalTongues()
+                counter1 -= 1
+            else: # frog is under water
+                CA.updateUnderWater()
+                if counter2 == CA.under_water_time: # first time step
+                    pass
+                    pygame.mixer.Sound.play(splashSound)
+                if counter2 == 1: # last time step
+                    CA.under_water = False
+                counter2 -= 1
 
 
+            if t%frog_period == 0: # frog randomly changes direction
+                frog_new_dir = randomNewDirection()
+                CA.changeFrogsDirection(frog_new_dir)
 
+            if t%stork_period == 0: # stork randomly changes direction
+                stork_new_dir = randomNewDirection() 
+                CA.changeStorksDirection(stork_new_dir)
+
+            t += 1
+
+        elif not CA.game_over and not CA.winner: # if player has lost one live and game is paused
+            if CA.lives <= 0:
+                if not CA.game_over:
+                    CA.game_over = True
+            else:
+                for event in events:
+                    if event.type == KEYDOWN and event.key == K_RETURN:
+                        CA.startWithNewLife()
+                        if counter1 != 0:
+                            counter1 = 0
+                        counter2 = CA.under_water_time             
+
+        elif not CA.winner: # game over
+            for event in events:
+                if event.type == KEYDOWN and event.key == K_RETURN:
+                    CA.startNewRound()
+                    counter1 = 0
+                    counter2 = 0
+                    t = 0
+        else: # victory
+            for event in events:
+                if event.type == KEYDOWN and event.key == K_RETURN:
+                    CA.startNewRound()
+                    counter1 = 0
+                    counter2 = 0
+                    t = 0
+
+        CA.draw()
+        
+        print(len(CA.flies))
+        if clock: 
+            clock2.tick(game_speed)
+
+        pygame.display.flip() 
+
+
+# automatically plays a certain number of games and determines, after how many timesteps the frog has lost 3 lives
 def stepsNeeded(pf, ps, runs, drawing = False):
-    ts = []
-    wins = 0
+    times = []
     for i in range(runs):
         CA = CellularAutomaton(health = 30, level = 1)
         CA.makeLevelOne()
@@ -792,7 +901,6 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                         CA.lives -= 1
                     CA.updateUnderWater()
                     if counter2 == CA.under_water_time: # first time step
-                        pass
                         pygame.mixer.Sound.play(splashSound)
                     if counter2 == 1: # last time step
                         CA.under_water = False
@@ -823,22 +931,15 @@ def stepsNeeded(pf, ps, runs, drawing = False):
                 CA.numflies = -1
             if drawing:
                 CA.draw()
-            if clock: 
-                clock2.tick(game_speed)
 
             pygame.display.flip() 
 
-        ts.append(t)
-    print(wins, 'wins')
-
-        # print(pf, ps, 'collisions:', CA.collisions/t)
-        # print(testnumbers)
-        # print(sum(testnumbers)/len(testnumbers))
-        # print('Mean time: ', sum(times)/len(times))
-    return ts
+        times.append(t)
+    return times
 
 
 
+# automatically plays a number of games and determines, how many collisions it takes to win a game
 def collisionsUntilWin(pf, ps, runs, drawing = False):
     collisions = []
     for i in range(runs):
@@ -905,9 +1006,6 @@ def collisionsUntilWin(pf, ps, runs, drawing = False):
             
             if drawing:
                 CA.draw()
-            
-            if clock: 
-                clock2.tick(game_speed)
 
             pygame.display.flip() 
             
@@ -916,136 +1014,7 @@ def collisionsUntilWin(pf, ps, runs, drawing = False):
 
 
 
-def playGame():
-    CA = CellularAutomaton(health = 30, level = 1)
-    CA.makeLevelOne()
-
-    started = False
-
-    clock1 = pygame.time.Clock()
-
-    # wait for the player to start the game
-    while not started:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and (event.key == K_RETURN or event.key == K_ESCAPE)):
-                started = True
-
-        CA.draw()
-        clock1.tick(60)
-
-        pygame.display.flip()
-
-    clock2 = pygame.time.Clock()
-
-    t = 0
-    running = True
-    counter1 = 0 # counter for tongue
-    counter2 = 0 # counter for under water
-    buttons = {K_UP: [-1, 0], K_DOWN: [1, 0], K_RIGHT: [0, 1], K_LEFT: [0, -1]}
-    times = [] # for measuring how long each time step takes
-
-    while running: 
-        start = time.time()
-        events = pygame.event.get()
-        for event in events:
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): # game ends and pygame window is closed
-                running = False
-
-        if not CA.paused and not CA.game_over and not CA.winner: # game is running and is updated every timestep
-            for event in events:
-                if counter1 == 0 and counter2 == 0 and event.type == KEYDOWN and event.key in (K_UP, K_DOWN, K_RIGHT, K_LEFT, K_SPACE): # player can only take an action if both counters are 0
-                    if event.key == K_SPACE: # frog goes under water
-                        counter2 = CA.under_water_time
-                        CA.health -= 6
-                        CA.under_water = True # used in self.draw(), to make frog disappear
-                    else:
-                        dir = buttons[event.key]
-                        counter1 = 2*tonguelength
-                        CA.health -= 3
-        
-            if counter1 == 0 and counter2 == 0: # no additional rules
-                CA.update()            
-                if CA.health < 0:
-                    CA.paused = True
-                    CA.lives -= 1
-            elif counter1 != 0: # tongue is activated
-                CA.updateTongue(dir)
-                if counter1 == 2*tonguelength: # first time step where tongue is activated
-                    pygame.mixer.Sound.play(slurpSound)
-                if counter1 == 1: # last time step where the tongue is activated
-                    CA.reviveOriginalTongues()
-                counter1 -= 1
-            else: # frog is under water
-                CA.updateUnderWater()
-                if counter2 == CA.under_water_time: # first time step
-                    pass
-                    pygame.mixer.Sound.play(splashSound)
-                if counter2 == 1: # last time step
-                    CA.under_water = False
-                counter2 -= 1
-
-
-            if t%frog_period == 0: # frog randomly changes direction
-                frog_new_dir = randomNewDirection()
-                CA.changeFrogsDirection(frog_new_dir)
-
-            if t%stork_period == 0: # stork randomly changes direction
-                stork_new_dir = randomNewDirection() 
-                CA.changeStorksDirection(stork_new_dir)
-
-            t += 1
-
-        elif not CA.game_over and not CA.winner: # if player has lost one live and game is paused
-            if CA.lives <= 0:
-                if not CA.game_over:
-                    CA.game_over = True
-            else:
-                if not testing:
-                    for event in events:
-                        if event.type == KEYDOWN and event.key == K_RETURN:
-                            CA.startWithNewLife()
-                            if counter1 != 0:
-                                counter1 = 0
-                            counter2 = CA.under_water_time
-                else: 
-                    CA.startWithNewLife()
-                    if counter1 != 0:
-                        counter1 = 0
-                    counter2 = CA.under_water_time                 
-
-        elif not CA.winner: # game over
-            if not testing:
-                for event in events:
-                    if event.type == KEYDOWN and event.key == K_RETURN:
-                        CA.startNewRound()
-            else:
-                running = False
-
-        else: # victory
-            if not testing:
-                for event in events:
-                    if event.type == KEYDOWN and event.key == K_RETURN:
-                        CA.startNewRound()
-            else:
-                testnumbers.append(CA.collisions)
-                print(sum(testnumbers)/len(testnumbers))
-                CA = CellularAutomaton(health = 30, level = 1)
-                CA.makeLevelOne()
-                started = True
-        
-        CA.draw()
-        
-        if clock: 
-            clock2.tick(game_speed)
-
-        pygame.display.flip() 
-
-        end = time.time()
-        times.append(end-start)
-        # print(times[-1])
-
-
-
+# automatically plays the game with a certain strategy
 def playWithStrategy(strategy, pf, ps, runs, drawing = False):
     acting_times = []
     winning_times = []
@@ -1130,9 +1099,6 @@ def playWithStrategy(strategy, pf, ps, runs, drawing = False):
             
             if drawing:
                 CA.draw()
-            
-            if clock: 
-                clock2.tick(game_speed)
 
             pygame.display.flip() 
 
@@ -1140,45 +1106,49 @@ def playWithStrategy(strategy, pf, ps, runs, drawing = False):
     return acting_times, winning_times, wins
 
 
+def runStepsSimulation(frog_periods, stork_periods, runs, drawing = False):
+    all_steps_dic = {}
+    for pf, ps in itertools.product(frog_periods, stork_periods):
+        steps = stepsNeeded(pf, ps, runs, drawing)
+        all_steps_dic[(pf, ps)] = steps
+        print(pf, ps, 'average steps:', sum(steps)/runs)
+    with open('data_of_steps' + str(frog_periods) + str(stork_periods) + ', runs= ' + str(runs), 'wb') as fp:
+        pickle.dump(all_steps_dic, fp)
 
 
-
-runs = 500
-frog_periods = [50, 75, 100, 125]
-stork_periods = [50, 75, 100, 125]
-all_colls_dic = {}
-all_steps_dic = {}
-
-
-# def runStrategySimulation(start, end, step, pf, ps, runs):
-#     strategy_data = {'at': {}, 'wt': {}, 'w':{}, 'pf':pf, 'ps':ps, 'runs':runs}
-#     ident = random.randint(0,10000)
-#     for strategy in range(start, end, step):
-#         acting_times, winning_times, wins = playWithStrategy(strategy, pf, ps, runs, drawing=False)
-#         strategy_data['at'][strategy] = acting_times
-#         strategy_data['wt'][strategy] = winning_times
-#         strategy_data['w'][strategy] = wins 
-#         print('strategy', strategy, 'finished')   
-#         with open('Strategy' + str(pf) + ';' + str(ps) + ';' + str(start) + '-' + str(end) + '_' + str(ident), 'wb') as fp:
-#             pickle.dump(strategy_data, fp)
-
-# runStrategySimulation(start=1, end=20, step=1, pf=50, ps=75, runs=500)
+def runCollisionsSimulation(frog_periods, stork_periods, runs, drawing = False):
+    all_colls_dic = {}
+    for pf, ps in itertools.product(frog_periods, stork_periods):
+        colls = collisionsUntilWin(pf, ps, runs, drawing)
+        all_colls_dic[(pf,ps)] = colls
+        print(pf, ps, 'average collisions to win:', sum(colls)/runs)
+    with open('data_of_collisions' + str(frog_periods) + str(stork_periods) + ', runs= ' + str(runs), 'wb') as fp:
+        pickle.dump(all_colls_dic, fp)
 
 
-# for pf, ps in itertools.product(frog_periods, stork_periods):
-#     steps = stepsNeeded(pf, ps, runs, False)
-#     all_steps_dic[(pf, ps)] = steps
-#     print(pf, ps, 'average steps:', sum(steps)/runs)
-# with open('Steps' + str(frog_periods) + str(stork_periods) + str(random.randint(0,10000)) + ', runs= ' + str(runs), 'wb') as fp:
-#     pickle.dump(all_steps_dic, fp)
+def runStrategySimulation(start, end, step, pf, ps, runs, drawing = False):
+    strategy_data = {'at': {}, 'wt': {}, 'w':{}, 'pf':pf, 'ps':ps, 'runs':runs}
+    for strategy in range(start, end, step):
+        acting_times, winning_times, wins = playWithStrategy(strategy, pf, ps, runs, drawing)
+        strategy_data['at'][strategy] = acting_times
+        strategy_data['wt'][strategy] = winning_times
+        strategy_data['w'][strategy] = wins 
+        print('strategy', strategy, 'finished')   
+        with open('data_of_strategy_' + str(pf) + ';' + str(ps) + ';' + str(start) + '-' + str(end), 'wb') as fp:
+            pickle.dump(strategy_data, fp)
 
 
-# for pf, ps in itertools.product(frog_periods, stork_periods):
-#     colls = collisionsUntilWin(pf, ps, runs, False)
-#     all_colls_dic[(pf,ps)] = colls
-#     print(pf, ps, 'average collisions to win:', sum(colls)/runs)
-# with open('SColls' + str(frog_periods) + str(stork_periods) + str(random.randint(0,10000)) + ', runs= ' + str(runs), 'wb') as fp:
-#     pickle.dump(all_colls_dic, fp)
+runs = 2
+frog_periods = [50, 75]
+stork_periods = [50, 75, 100]
+
+# runStepsSimulation(frog_periods, stork_periods, runs, drawing = True)
+
+# runCollisionsSimulation(frog_periods, stork_periods, runs, drawing = True)
+
+# runStrategySimulation(start=1, end=2, step=1, pf=50, ps=75, runs=2, drawing = True)
 
 playGame()
+
+
 pygame.quit()
