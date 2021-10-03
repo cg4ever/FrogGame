@@ -9,8 +9,8 @@ os.chdir(sourceFileDir)
 
 simulation_dir = 'simulation_data'
 
-path1 = os.path.join(simulation_dir, 'Strategy50;75;1-20_3292')
-path2 = os.path.join(simulation_dir, 'Strategy75;100;1-20_8069')
+path1 = os.path.join(simulation_dir, 'data_of_strategies_1-20_50,75')
+path2 = os.path.join(simulation_dir, 'data_of_strategies_1-20_75,100')
 
 with open (path1, 'rb') as fp:
     dic1 = pickle.load(fp)
@@ -32,7 +32,7 @@ ax.set_title(str(dic2['runs']) + ' runs with two different pairs of periods' )
 ax.plot(wins_dic.keys(), wins_dic.values(), label= '(50, 75)')
 ax.plot(wins_dic2.keys(), wins_dic2.values(), label= '(75, 100)')
 # ax.plot(wins_dic.keys(), y, label= 'Vergleichsgerade')
-ax.set_xlabel('Different strategies')
+ax.set_xlabel('Different strategies/ values of $m$')
 ax.set_ylabel('Number of wins')
 plt.xticks([i for i in range(1,20)])
 ax.legend()
